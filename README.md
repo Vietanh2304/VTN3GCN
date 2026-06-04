@@ -46,12 +46,14 @@ We propose **VTN3GCN**, a multi-view multi-stream framework that jointly integra
 | VTNPF | 3-view | 87.99 ± 0.51 | 95.50 ± 0.17 |
 | **VTN3GCN (Ours)** | **3-view** | **93.16 ± 0.35** | **98.41 ± 0.17** |
 
-### Cross-Dataset Evaluation (3 Views)
-
+### Fusion Ablation & Cross-Dataset Evaluation (3 Views)
+ 
 | Fusion Method | MultiVSL200 (%) | MultiVSL400 (%) | Params (M) |
 |---------------|-----------------|-----------------|------------|
 | Concatenation | 92.69 ± 0.21 | 95.36 ± 0.15 | 10.68 |
+| Weighted Addition | 92.65 ± 0.34 | — | — |
 | Cross-Attention | 92.43 ± 0.34 | 94.91 ± 0.28 | 19.08 |
+| Gated Multimodal Unit | 91.98 ± 0.25 | — | — |
 | Late Weighted Fusion | 93.06 ± 0.26 | 95.19 ± 0.22 | 4.38 |
 | **Late Average Fusion (Ours)** | **93.16 ± 0.35** | **95.40 ± 0.14** | **4.38** |
 
@@ -99,7 +101,10 @@ Given feature map $F \in \mathbb{R}^{(B \times T) \times C \times H \times W}$ f
 ### Keypoints Graph
 
 46 keypoints extracted via RTMPose: 21 per hand + 2 shoulders + 2 elbows.
-
+<p align="center">
+  <img src="images/handKP.png" width="800"/>
+  <br><em>Figure 4: Keypoints graph mapping hand and body joint links.</em>
+</p>
 ---
 
 ## Installation
@@ -205,16 +210,6 @@ VTN3GCN_CBAM/
 
 ---
 
-## Citation
-
-```bibtex
-@article{vtn3gcn2025,
-  title   = {VTN3GCN: Enhancing Sign Language Recognition Through Multi-View and Multi-Stream Integration},
-  author  = {...},
-  journal = {IEEE Access},
-  year    = {2025}
-}
-```
 
 ---
 
