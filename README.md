@@ -20,7 +20,29 @@ We propose **VTN3GCN**, a multi-view multi-stream framework that jointly integra
 </p>
 
 ---
+## Architecture Details
 
+### ST-CBAM + AttentionPool2D
+
+<p align="center">
+  <img src="images/stcbam_detail.png" width="800"/>
+  <br><em>Figure 3: ST-CBAM pipeline — Channel, Temporal, and Spatial Attention modules.</em>
+</p>
+
+Given feature map $F \in \mathbb{R}^{(B \times T) \times C \times H \times W}$ from ResNet34 ($C=512, H=7, W=7$):
+1. **Channel Attention**: MLP-based squeeze-and-excitation (512→32→512)
+2. **Temporal Attention**: 1D conv (k=3) across frame dimension
+3. **Spatial Attention**: 2D conv (7×7) on spatial dimensions
+4. **AttentionPool2D**: 4-head attention pooling replacing global average pooling
+
+### Keypoints Graph
+
+46 keypoints extracted via RTMPose: 21 per hand + 2 shoulders + 2 elbows.
+<p align="center">
+  <img src="images/handKP.png" width="800"/>
+  <br><em>Figure 4: Keypoints graph mapping hand and body joint links.</em>
+</p>
+---
 ## Key Contributions
 
 - **Multi-View Multi-Stream Architecture**: Integrates RGB, AGCN skeleton features, and Pose Flow from 3 viewpoints with view-specific encoder designs.
@@ -83,29 +105,7 @@ We propose **VTN3GCN**, a multi-view multi-stream framework that jointly integra
 
 ---
 
-## Architecture Details
 
-### ST-CBAM + AttentionPool2D
-
-<p align="center">
-  <img src="images/stcbam_detail.png" width="800"/>
-  <br><em>Figure 3: ST-CBAM pipeline — Channel, Temporal, and Spatial Attention modules.</em>
-</p>
-
-Given feature map $F \in \mathbb{R}^{(B \times T) \times C \times H \times W}$ from ResNet34 ($C=512, H=7, W=7$):
-1. **Channel Attention**: MLP-based squeeze-and-excitation (512→32→512)
-2. **Temporal Attention**: 1D conv (k=3) across frame dimension
-3. **Spatial Attention**: 2D conv (7×7) on spatial dimensions
-4. **AttentionPool2D**: 4-head attention pooling replacing global average pooling
-
-### Keypoints Graph
-
-46 keypoints extracted via RTMPose: 21 per hand + 2 shoulders + 2 elbows.
-<p align="center">
-  <img src="images/handKP.png" width="800"/>
-  <br><em>Figure 4: Keypoints graph mapping hand and body joint links.</em>
-</p>
----
 
 ## Installation
 
