@@ -3,7 +3,7 @@ data:
   # model_name: VTNHCPF_Three_view
   model_name: VTN3GCN
   # model_name: VTN3GCN_v2
-  base_url: /home/ibmelab/Documents/GG/VSLRecognition/vsl
+  base_url: /mnt/sda1/VSLR_Storage/vsl
   dataset_name: VN_SIGN
   temporal_stride: 2
   num_output_frames: 28
@@ -20,7 +20,7 @@ data:
     NORM_STD_IMGNET: [0.229, 0.224, 0.225]
   SHOULDER_DIST_EPSILON: 1.2
   WRIST_DELTA: 0.15
-  label_folder: label1-200/label/labelThreeView/labelThreeViewTesting
+  label_folder: label1-200/label/labelThreeView
   data_type: labels
   center_kp: False
 training:

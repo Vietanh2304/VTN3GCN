@@ -44,7 +44,7 @@ if __name__ == "__main__":
     if not is_test:
         run = wandb.init(
             # Set the project where this run will be logged
-            project=f"{cfg['data']['model_name']}",
+            project="VTN3GCN_CBAM",
             # mode = 'disabled',
             # Track hyperparameters and run metadata
             config={
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     else:
         run = wandb.init(
             # Set the project where this run will be logged
-            project=f"{cfg['data']['model_name']}",
+            project="VTN3GCN_CBAM",
             mode = 'disabled',
             # Track hyperparameters and run metadata
             config={

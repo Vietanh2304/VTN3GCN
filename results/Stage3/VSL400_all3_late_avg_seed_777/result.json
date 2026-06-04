@@ -1,0 +1,41 @@
+{
+  "views": [
+    "front",
+    "left",
+    "right"
+  ],
+  "method": "late_avg",
+  "fusion_type": "late",
+  "num_views": 3,
+  "best_epoch": 22,
+  "best_val_acc": 0.96,
+  "test_acc": 0.9535541195476576,
+  "test_loss": 0.41307187735167766,
+  "fusion_out_dim": 400,
+  "num_params": 4384944,
+  "total_time_sec": 43.5122652053833,
+  "args": {
+    "features_dir": "features_vsl400",
+    "views": [
+      "front",
+      "left",
+      "right"
+    ],
+    "method": "late_avg",
+    "num_classes": 400,
+    "dim": 1024,
+    "dropout": 0.3,
+    "lr": 0.0005,
+    "weight_decay": 0.0001,
+    "batch_size": 128,
+    "epochs": 100,
+    "patience": 15,
+    "label_smoothing": 0.1,
+    "grad_clip": 1.0,
+    "warmup_epochs": 5,
+    "seed": 777,
+    "device": "cuda:1",
+    "num_workers": 2,
+    "output_dir": "VSL400_all3_late_avg_seed_777"
+  }
+}

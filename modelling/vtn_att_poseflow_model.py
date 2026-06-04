@@ -6,6 +6,20 @@ from .cbam_modules import CSMAC, IVHF
 import torch.nn.functional as F
 from pytorch_lightning.utilities.migration import pl_legacy_patch
 
+def _ramped_md_prob(current_epoch: int,
+                    warmup: int = 5,
+                    ramp: int = 10,
+                    max_prob: float = 0.3) -> float:
+    """Modality dropout with warmup + linear ramp.
+    [0, warmup):           0.0
+    [warmup, warmup+ramp): linear 0 -> max_prob
+    [warmup+ramp, inf):    max_prob
+    """
+    if current_epoch < warmup:
+        return 0.0
+    if current_epoch < warmup + ramp:
+        return (current_epoch - warmup) / ramp * max_prob
+    return max_prob
 class MMTensorNorm(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -32,13 +46,14 @@ class VTNHCPF(nn.Module):
 
         self.feature_extractor = FeatureExtractor(cnn, embed_size, freeze_layers,
                                                   use_cbam=use_cbam_t1)
-        self.norm = MMTensorNorm(-1)
+        self.norm = nn.LayerNorm(106 + self.num_attn_features)  # = 1130
         self.bottle_mm = nn.Linear(106 + self.num_attn_features, self.num_attn_features)
 
         # CS-MAC tầng 2 cho 2-stream [RGB=1024, PF=106]
         if use_cbam_t2:
             self.csmac = CSMAC(stream_dims=[self.num_attn_features, 106],
-                               common_dim=256, num_heads=4)
+                       common_dim=256, num_heads=4)
+            self.beta_t2 = nn.Parameter(torch.zeros(1))  # ReZero gate
 
         self.self_attention_decoder = SelfAttention(
             self.num_attn_features, self.num_attn_features,
@@ -48,16 +63,30 @@ class VTNHCPF(nn.Module):
         self.classifier = LinearClassifier(self.num_attn_features, self.num_classes, dropout)
         self.dropout = dropout
         self.relu = F.relu
+        # Ramped modality dropout
+        self.register_buffer('md_current_epoch', torch.tensor(0, dtype=torch.long))
+        self.md_warmup_epochs = 5
+        self.md_ramp_epochs = 10
+        self.md_max_prob = 0.30
 
     def reset_head(self, num_classes):
         self.classifier = LinearClassifier(self.num_attn_features, num_classes, self.dropout)
         print("Reset to ", num_classes)
 
     def forward_features(self, features=None, poseflow=None):
+        if self.training:
+            _md_p = _ramped_md_prob(
+                int(getattr(self, 'md_current_epoch', torch.tensor(999)).item()),
+                warmup=getattr(self, 'md_warmup_epochs', 5),
+                ramp=getattr(self, 'md_ramp_epochs', 10),
+                max_prob=getattr(self, 'md_max_prob', 0.25),
+            )
+            if _md_p > 0 and torch.rand(1).item() < _md_p:
+                features = torch.zeros_like(features)
         zp = torch.cat((features, poseflow), dim=-1)         # (B, T, 1024+106=1130)
 
         if self.use_cbam_t2:
-            zp = self.csmac(zp)                              # CS-MAC tầng 2
+            zp = zp + self.beta_t2 * self.csmac(zp)                                 # CS-MAC tầng 2
 
         zp = self.norm(zp)
         zp = self.relu(self.bottle_mm(zp))
@@ -103,13 +132,14 @@ class VTNHCPF_GCN(nn.Module):
         concat_dim = rgb_dim + num_gcn_features + pose_flow_features
         out_dim = num_attn_features + add_attn_features        # 1024
 
-        self.norm = MMTensorNorm(-1)
+        self.norm = nn.LayerNorm(concat_dim)  # = 1386
         self.bottle_mm = nn.Linear(concat_dim, out_dim)
 
         # CS-MAC tầng 2 cho 3-stream [RGB=1024, AGCN=256, PF=106]
         if use_cbam_t2:
             self.csmac = CSMAC(stream_dims=[rgb_dim, num_gcn_features, pose_flow_features],
-                               common_dim=256, num_heads=4)
+                       common_dim=256, num_heads=4)
+            self.beta_t2 = nn.Parameter(torch.zeros(1))  # ReZero gate
 
         self.self_attention_decoder = SelfAttention(
             out_dim, out_dim,
@@ -121,6 +151,11 @@ class VTNHCPF_GCN(nn.Module):
         self.dropout = dropout
         self.num_classes = num_classes
         self.relu = F.relu
+        # Ramped modality dropout
+        self.register_buffer('md_current_epoch', torch.tensor(0, dtype=torch.long))
+        self.md_warmup_epochs = 5
+        self.md_ramp_epochs = 10
+        self.md_max_prob = 0.30
 
     def reset_head(self, num_classes):
         self.classifier = LinearClassifier(self.num_attn_features, num_classes, self.dropout)
@@ -128,10 +163,19 @@ class VTNHCPF_GCN(nn.Module):
 
     def forward_features(self, features=None, poseflow=None, features_keypoint=None):
         # cat: [RGB=1024, AGCN=256, PF=106] = 1386
+        if self.training:
+            _md_p = _ramped_md_prob(
+                int(getattr(self, 'md_current_epoch', torch.tensor(999)).item()),
+                warmup=getattr(self, 'md_warmup_epochs', 5),
+                ramp=getattr(self, 'md_ramp_epochs', 10),
+                max_prob=getattr(self, 'md_max_prob', 0.25),
+            )
+            if _md_p > 0 and torch.rand(1).item() < _md_p:
+                features = torch.zeros_like(features)
         zp = torch.cat((features, features_keypoint, poseflow), dim=-1)
 
         if self.use_cbam_t2:
-            zp = self.csmac(zp)                                # CS-MAC tầng 2
+            zp = zp + self.beta_t2 * self.csmac(zp)                                # CS-MAC tầng 2
 
         zp = self.norm(zp)
         zp = self.relu(self.bottle_mm(zp))
@@ -246,6 +290,7 @@ class VTN3GCN(nn.Module):
         # Tầng 3: IVHF
         if use_cbam_t3:
             self.ivhf = IVHF(view_dim=view_dim)
+            self.gamma_t3 = nn.Parameter(torch.zeros(1))  # ReZero gate
 
         self.embed_size = embed_size
         self.feature_extractor = None
@@ -339,10 +384,11 @@ class VTN3GCN(nn.Module):
         right_ft  = self.right.forward_features(right_feature, right_kp_feature, right_pf).mean(1)
 
         # 5. Trộn 3 góc nhìn (IVHF Tầng 3)
+        output_baseline = torch.cat([left_ft, center_ft, right_ft], dim=-1)  # baseline luôn có
         if self.use_cbam_t3:
-            output_features = self.ivhf(left_ft, center_ft, right_ft)
+            output_features = output_baseline + self.gamma_t3 * self.ivhf(left_ft, center_ft, right_ft)
         else:
-            output_features = torch.cat([left_ft, center_ft, right_ft], dim=-1)
+            output_features = output_baseline
 
         # 6. Phân loại
         y = self.classifier(output_features)

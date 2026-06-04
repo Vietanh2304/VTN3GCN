@@ -53,28 +53,25 @@ class FeatureExtractor(nn.Module):
         else:
             self.pointwise_conv = nn.Identity()
             cbam_channels = 512
-
         self.use_cbam = use_cbam
+        self.avg_pool = F.adaptive_avg_pool2d  # LUÔN có baseline AvgPool
         if use_cbam:
             self.cbam_pool = STCBAM_AttnPool(in_channels=cbam_channels)
-        else:
-            self.avg_pool = F.adaptive_avg_pool2d  # giữ AvgPool cho ablation
-
+            self.alpha_t1 = nn.Parameter(torch.tensor([0.1]))  # ReZero gate
     # Trong class FeatureExtractor, sửa hàm forward
     def forward(self, rgb_clip):
         b, t, c, h, w = rgb_clip.size()
-        
-        # Nếu dùng STCBAM tầng 1, ta cần áp dụng khi còn đủ chiều B, T
-        # (Giả sử STCBAM được gọi ở đây hoặc bên trong self.resnet)
-        
         rgb_clip_flat = rgb_clip.view(b * t, c, h, w)
-        features = self.resnet(rgb_clip_flat)
-        features = self.pointwise_conv(features)
-
-        # SỬA DÒNG SQUEEZE: Chỉ xóa 2 chiều spatial cuối (H, W)
-        features = self.avg_pool(features, 1).squeeze(-1).squeeze(-1)
-        
+        features = self.resnet(rgb_clip_flat)            # (B*T, C, H', W')
+        features = self.pointwise_conv(features)         # (B*T, embed_size, H', W')
+        # Dispatch: STCBAM tầng 1 hoặc AvgPool ablation
         # Restore dimensions
+        pooled = self.avg_pool(features, 1).squeeze(-1).squeeze(-1)
+        if self.use_cbam:
+            cbam_out = self.cbam_pool(features, b, t)               # (B*T, C)
+            features = pooled + self.alpha_t1 * cbam_out            # ReZero
+        else:
+            features = pooled
         features = features.view(b, t, -1)
         return features
     

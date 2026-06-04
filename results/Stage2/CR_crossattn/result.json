@@ -1,0 +1,39 @@
+{
+  "views": [
+    "center",
+    "right"
+  ],
+  "method": "crossattn",
+  "fusion_type": "feature",
+  "num_views": 2,
+  "best_epoch": 17,
+  "best_val_acc": 0.9242424242424242,
+  "test_acc": 0.9279393173198482,
+  "test_loss": 0.6356035442328182,
+  "fusion_out_dim": 2048,
+  "num_params": 13010119,
+  "total_time_sec": 14.750513553619385,
+  "args": {
+    "features_dir": "features_stage1",
+    "views": [
+      "center",
+      "right"
+    ],
+    "method": "crossattn",
+    "num_classes": 199,
+    "dim": 1024,
+    "dropout": 0.3,
+    "lr": 0.0005,
+    "weight_decay": 0.0001,
+    "batch_size": 128,
+    "epochs": 100,
+    "patience": 15,
+    "label_smoothing": 0.1,
+    "grad_clip": 1.0,
+    "warmup_epochs": 5,
+    "seed": 42,
+    "device": "cuda:1",
+    "num_workers": 2,
+    "output_dir": "/media/ibmelab/ibme31/VTN3GCN_CBAM/results/Stage2/CR_crossattn"
+  }
+}

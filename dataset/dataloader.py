@@ -155,7 +155,7 @@ def build_dataloader(cfg, split, is_train=True, model = None,labels = None):
                                             shuffle = is_train,
                                             prefetch_factor = cfg['training'].get('prefetch_factor',2),
                                             pin_memory=True,
-                                            persistent_workers =  True,
+                                            persistent_workers =  2,
                                             # sampler = sampler
                                             )
 

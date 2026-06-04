@@ -1,0 +1,80 @@
+task: ISLR
+data:
+  model_name: VTNGCN
+  base_url: /mnt/sda1/VSLR_Storage/vsl
+  dataset_name: VN_SIGN
+  temporal_stride: 2
+  num_output_frames: 16
+  crop_two_hand: true
+  transform_cfg:
+    index_setting:
+      - segment
+      - pad
+      - segment
+      - pad
+  vid_transform:
+    IMAGE_SIZE: 224
+    NORM_MEAN_IMGNET: [0.485, 0.456, 0.406]
+    NORM_STD_IMGNET: [0.229, 0.224, 0.225]
+  SHOULDER_DIST_EPSILON: 1.2
+  WRIST_DELTA: 0.15
+  label_folder: label1-200/label/labelRight
+  data_type: labels
+training:
+  cbam_warmup_epochs: 5  # CBAM_T1 fix: freeze alpha_t1 in first N epochs
+  coefficient:
+    cls_x: 1
+    cts_x: 1
+    cosine_x: 1
+  label_smoothing: 0.1
+  device: cuda:1
+  overwrite: true
+  log_freq: 1
+  experiment_name: "Stage1 Right CBAM_T1 MDramp30 VSL199"
+  model_dir: results/Stage1_Right
+  random_seed: 42
+  shuffle: True
+  num_workers: 4
+  prefetch_factor: 1
+  batch_size: 8
+  total_epoch: 100
+  learning_rate: 0.0001
+  save_checkpoints: true
+  scheduler_factor: 0.1
+  scheduler_patience: 5
+  plot_loss: true
+  plot_lr: true
+  plot_acc: true
+  criterion: MyCustomLoss
+  optimzer: Adam
+  lr_scheduler: StepLR
+  top_k: 5
+  print_stats: true
+  pretrained: true
+  pretrained_model: checkpoints/VTNGCN/VTNGCN finetune autsl for one view/best_checkpoints_acc.pth
+  lr_step_size: 10
+  gamma: 0.8
+  num_accumulation_steps: 2
+  patience: 15
+  verbose: true
+  delta: 0
+  is_early_stopping: true
+  gradient_clip_val: 1
+  w_decay: 1e-4
+  log_train_step: true
+  log_steps: 50
+  evaluate_step: 250
+  evaluate_strategy: epoch
+inference:
+  batch_size: 8
+model:
+  num_classes: 199
+  num_heads: 8
+  num_layers: 4
+  embed_size: 512
+  cnn: rn34
+  gcn: AAGCN
+  freeze_layers: 5
+  dropout: 0.3
+  use_cbam_t1: true
+  use_cbam_t2: false

@@ -524,10 +524,18 @@ class DeleteFlowKeypoints(object):
 import math
 
 class TemporalSpeedJitter(object):
-    def __init__(self, p=0.8, factor_range=(0.8, 1.2), t_clamp=(8, 24)):
+    """
+    Mô phỏng tốc độ ký khác nhau (slow/fast signer) bằng cách jitter speed
+    rồi resample về T cố định để giữ batch shape consistent.
+    
+    Logic:
+    - factor > 1.0: speed up (skip frames) → resample to T frames
+    - factor < 1.0: slow down (interpolate) → resample to T frames
+    - Output luôn có T = T_input (giữ shape ổn định)
+    """
+    def __init__(self, p=0.8, factor_range=(0.8, 1.2)):
         self.p = p
         self.factor_range = factor_range
-        self.t_clamp = t_clamp
 
     def randomize_parameters(self):
         self._rand = random.random()
@@ -537,13 +545,20 @@ class TemporalSpeedJitter(object):
         self.randomize_parameters()
         if self._rand < self.p:
             T = left['rgb'].shape[0]
-            T_new = max(self.t_clamp[0], min(self.t_clamp[1], round(T * self._factor)))
-            if T_new != T:
-                idx = torch.linspace(0, T - 1, T_new).round().long()
-                for view in [left, center, right]:
-                    view['rgb'] = view['rgb'][idx]
-                    view['kp'] = view['kp'][:, idx, ...]
-                    view['pf'] = view['pf'][idx]
+            # T_new là số "virtual frames" sau speed change
+            T_new = max(2, round(T * self._factor))
+            # Sample T_new indices từ [0, T-1] (mô phỏng speed change)
+            # rồi resample về T frames để giữ shape gốc
+            virtual_idx = torch.linspace(0, T - 1, T_new)
+            # Resample về T positions
+            final_idx = torch.linspace(0, T_new - 1, T).round().long().clamp(0, T_new - 1)
+            # Map qua virtual_idx về frame thật
+            real_idx = virtual_idx[final_idx].round().long().clamp(0, T - 1)
+            
+            for view in [left, center, right]:
+                view['rgb'] = view['rgb'][real_idx]
+                view['kp'] = view['kp'][:, real_idx, ...]
+                view['pf'] = view['pf'][real_idx]
         return left, center, right
 
 class KeypointGaussianNoise(object):

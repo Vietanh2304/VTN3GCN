@@ -53,7 +53,7 @@ def main():
     # Lazy import to keep --help fast
     from mmpose.apis import MMPoseInferencer
     print(f"Loading MMPoseInferencer on {args.device}...")
-    wholebody_detector = MMPoseInferencer("td-hm_res152_8xb32-210e_coco-wholebody-384x288", device=args.device)
+    wholebody_detector = MMPoseInferencer("rtmpose-m_8xb64-270e_coco-wholebody-256x192", device=args.device)
     
     df = pd.read_csv(args.csv_path)
     df_shard = df.iloc[args.shard::args.num_shards]

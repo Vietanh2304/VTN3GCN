@@ -1,0 +1,13 @@
+run,views,method,best_epoch,val_acc,test_acc,out_dim,params_M,time_min
+CR_addweighted,center+right,addweighted,16,0.9306,0.9292,1024,1.26,0.2
+CR_concat,center+right,concat,7,0.9217,0.9292,2048,4.61,0.1
+CR_crossattn,center+right,crossattn,17,0.9242,0.9279,2048,13.01,0.2
+CR_gmu,center+right,gmu,8,0.9003,0.909,1024,3.36,0.1
+LC_addweighted,left+center,addweighted,15,0.9167,0.9166,1024,1.26,0.2
+LC_concat,left+center,concat,4,0.9104,0.9267,2048,4.61,0.1
+LC_crossattn,left+center,crossattn,8,0.9129,0.9191,2048,13.01,0.2
+LC_gmu,left+center,gmu,22,0.8977,0.9077,1024,3.36,0.2
+LR_addweighted,left+right,addweighted,8,0.8813,0.8938,1024,1.26,0.1
+LR_concat,left+right,concat,2,0.875,0.8925,2048,4.61,0.1
+LR_crossattn,left+right,crossattn,29,0.8813,0.8963,2048,13.01,0.3
+LR_gmu,left+right,gmu,17,0.8485,0.8862,1024,3.36,0.2

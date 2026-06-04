@@ -1,0 +1,5 @@
+run,views,method,best_epoch,val_acc,test_acc,out_dim,params_M,time_min
+LCR_addweighted,left+center+right,addweighted,12,0.9343,0.9305,1024,1.26,0.2
+LCR_concat,left+center+right,concat,1,0.9331,0.9305,3072,10.06,0.1
+LCR_crossattn,left+center+right,crossattn,8,0.9356,0.9254,3072,18.46,0.2
+LCR_gmu,left+center+right,gmu,5,0.9167,0.9216,1024,4.41,0.1

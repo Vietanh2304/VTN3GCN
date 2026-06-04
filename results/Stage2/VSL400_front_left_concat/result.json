@@ -1,0 +1,39 @@
+{
+  "views": [
+    "front",
+    "left"
+  ],
+  "method": "concat",
+  "fusion_type": "feature",
+  "num_views": 2,
+  "best_epoch": 3,
+  "best_val_acc": 0.9507070707070707,
+  "test_acc": 0.9474959612277868,
+  "test_loss": 0.3769127278797846,
+  "fusion_out_dim": 2048,
+  "num_params": 5020048,
+  "total_time_sec": 14.311450719833374,
+  "args": {
+    "features_dir": "features_vsl400",
+    "views": [
+      "front",
+      "left"
+    ],
+    "method": "concat",
+    "num_classes": 400,
+    "dim": 1024,
+    "dropout": 0.3,
+    "lr": 0.0005,
+    "weight_decay": 0.0001,
+    "batch_size": 128,
+    "epochs": 100,
+    "patience": 15,
+    "label_smoothing": 0.1,
+    "grad_clip": 1.0,
+    "warmup_epochs": 5,
+    "seed": 42,
+    "device": "cuda:1",
+    "num_workers": 2,
+    "output_dir": "VSL400_front_left_concat"
+  }
+}

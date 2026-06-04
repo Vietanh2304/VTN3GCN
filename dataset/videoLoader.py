@@ -151,7 +151,11 @@ def pad_array(array, l_and_r):
 def pad_index(index_arr, l_and_r) :
     left, right = l_and_r
     index_arr = index_arr.tolist()
-    index_arr = left*[index_arr[0]] + index_arr + right*[index_arr[-1]]
+    if len(index_arr) == 0:
+        # Video too short (vlen <= 3): use frame 0 for all positions
+        index_arr = [0] * (left + right)
+    else:
+        index_arr = left*[index_arr[0]] + index_arr + right*[index_arr[-1]]
     return np.array(index_arr)
     
 def load_video(zip_file, name, vlen, num_frames, dataset_name, is_train, 
@@ -191,7 +195,7 @@ def load_batch_video(zip_file, names, vlens, dataset_name, is_train,
 
         if is_train:
             rgb_augment = torchvision.transforms.Compose([
-                torchvision.transforms.RandomApply([torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2)], p=0.3),
+                                torchvision.transforms.RandomApply([torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2)], p=0.3),
                 torchvision.transforms.RandomApply([torchvision.transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))], p=0.3)
             ])
             video = rgb_augment(video)

@@ -62,7 +62,7 @@ class VTNHCPF_ThreeViewsData(Dataset):
             transform = Compose(
                                 Scale(self.data_cfg['vid_transform']['IMAGE_SIZE'] * 8 // 7),
                                 MultiScaleCrop((self.data_cfg['vid_transform']['IMAGE_SIZE'], self.data_cfg['vid_transform']['IMAGE_SIZE']), scales),
-                                RandomHorizontalFlip(), 
+                                # RandomHorizontalFlip(),  # disabled: SLR has dominant hand 
                                 RandomRotate(p=0.3),
                                 RandomShear(0.3,0.3,p = 0.3),
                                 Salt( p = 0.3),
@@ -312,8 +312,10 @@ class VTN3GCNData(Dataset):
         total_frames = min(total_frames, n_poses)
         return total_frames,width,height
     def transform_handflow(self, handflow):
-        # Convert to a PyTorch tensor and transpose to get [C, V]
-        handflow_tensor = torch.tensor(handflow, dtype=torch.float32).transpose(0, 1)
+        # handflow: numpy (46, 2) raw pixel coords from HDF5
+        handflow_tensor = torch.tensor(handflow, dtype=torch.float32).transpose(0, 1)  # (2, 46)
+        # Normalize to [0, ~1] — match AAGCN AUTSL training distribution
+        handflow_tensor = handflow_tensor / 256.0
         return handflow_tensor
     def read_one_view(self,name,selected_index,width,height):
        
@@ -442,7 +444,7 @@ class VTN3GCNData(Dataset):
     def __getitem__(self, idx):
         self.transform.randomize_parameters()
 
-        center, left, right, label = self.train_labels.iloc[idx].values
+        center, left, right, _id, label = self.train_labels.iloc[idx].values
         center_video, center_pf, center_kp, left_video, left_pf, left_kp, right_video, right_pf, right_kp = self.read_videos(center, left, right)
 
         if self.is_train:

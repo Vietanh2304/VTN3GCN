@@ -7,6 +7,30 @@ import time
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 import os
+import numpy as np
+def mixup_features(features_dict, labels, alpha=0.2):
+    """Mixup cho multi-modal multi-view input dict.
+    Args:
+        features_dict: dict các tensor input (left, center, right, *_kp, *_pf, ...)
+        labels: (B,) ground truth
+        alpha: Beta distribution param (0.2-0.4 phù hợp dataset nhỏ)
+    Returns:
+        mixed_features: dict đã mix
+        labels_a, labels_b: 2 set labels để compute loss
+        lam: mixing coefficient
+    """
+    if alpha <= 0:
+        return features_dict, labels, labels, 1.0
+    lam = float(np.random.beta(alpha, alpha))
+    batch_size = labels.size(0)
+    idx = torch.randperm(batch_size, device=labels.device)
+    mixed = {}
+    for k, v in features_dict.items():
+        if isinstance(v, torch.Tensor) and v.is_floating_point():
+            mixed[k] = lam * v + (1.0 - lam) * v[idx]
+        else:
+            mixed[k] = v
+    return mixed, labels, labels[idx], lam
 class Trainer:
     def __init__(self,model,criterion,optimizer,device,scheduler = None,k = 5,
                 epoch = 100,logging = None,cfg = None,num_accumulation_steps = 1,
@@ -45,6 +69,20 @@ class Trainer:
     def train(self,train_loader,val_loader,test_loader):
         cfg = self.cfg
         for epoch in tqdm(range(self.epoch)):
+            # CBAM_T1 fix: freeze alpha_t1 trong cbam_warmup_epochs epoch dau
+            cbam_warmup = cfg['training'].get('cbam_warmup_epochs', 0)
+            if cbam_warmup > 0:
+                freeze_alpha = epoch < cbam_warmup
+                for n, p in self.model.named_parameters():
+                    if 'alpha_t1' in n:
+                        p.requires_grad = not freeze_alpha
+                if epoch == cbam_warmup:
+                    self.logging.info(f"[CBAM_T1] Unfreezing alpha_t1 at epoch {epoch}")
+            # Log alpha_t1 moi epoch
+            for n, p in self.model.named_parameters():
+                if 'alpha_t1' in n:
+                    self.logging.info(f"[CBAM_T1] Epoch {epoch}: {n} = {p.item():.6f}")
+
             if self.evaluate_strategy  == 'epoch':
                 train_loss_log,train_loss, _, _, train_acc = self.train_epoch(train_loader,epoch=epoch)
                 self.train_losses.append(train_loss / len(train_loader))
@@ -145,6 +183,20 @@ class Trainer:
             self.wandb.run.finish()
             
     def train_epoch(self,dataloader,val_loader = None,epoch = None):
+        # Sync epoch into MD buffers for ramped modality dropout
+        _target = self.model.module if hasattr(self.model, 'module') else self.model
+        for _name, _mod in _target.named_modules():
+            if hasattr(_mod, 'md_current_epoch'):
+                _mod.md_current_epoch.fill_(epoch if epoch is not None else 0)
+                if _name == '' or _name.count('.') <= 1:
+                    from modelling.vtn_att_poseflow_model import _ramped_md_prob
+                    _p = _ramped_md_prob(
+                        int(_mod.md_current_epoch.item()),
+                        warmup=_mod.md_warmup_epochs,
+                        ramp=_mod.md_ramp_epochs,
+                        max_prob=_mod.md_max_prob,
+                    )
+                    print(f"[MD-schedule] Epoch {epoch}: {_name or 'root'} md_prob={_p:.3f}")
         self.model.train()
         pred_correct, pred_all = 0, 0
         running_loss = 0.0
@@ -162,20 +214,38 @@ class Trainer:
         
         
 
+        use_mixup = self.cfg['training'].get('mixup', False)
+        mixup_alpha = self.cfg['training'].get('mixup_alpha', 0.2)
+
         for idx, data in enumerate(tqdm(dataloader)):
-            
+
             inputs, labels = data
             inputs = {key:values.to(self.device,non_blocking=True) for key,values in inputs.items() }
             labels = labels.to(self.device,non_blocking=True)
-            
+
+            # Mixup: trộn samples trong batch
+            if use_mixup:
+                inputs, labels_a, labels_b, lam = mixup_features(inputs, labels, alpha=mixup_alpha)
+            else:
+                labels_a, labels_b, lam = labels, labels, 1.0
 
             outputs = self.model(**inputs)
             if self.cfg['training']['criterion'] == "OLM_Loss":
-                loss,loss_dict,logitsnorm_loss = self.criterion(**outputs, labels=labels,iteration = epoch)
+                loss_a, loss_dict, logitsnorm_loss = self.criterion(**outputs, labels=labels_a, iteration=epoch)
+                if use_mixup and lam < 1.0:
+                    loss_b, _, _ = self.criterion(**outputs, labels=labels_b, iteration=epoch)
+                    loss = lam * loss_a + (1.0 - lam) * loss_b
+                else:
+                    loss = loss_a
                 logitsnorm_loss = logitsnorm_loss / self.num_accumulation_steps
                 logitsnorm_loss.backward()
             else:
-                loss,loss_dict = self.criterion(**outputs, labels=labels,epoch = epoch)
+                loss_a, loss_dict = self.criterion(**outputs, labels=labels_a, epoch=epoch)
+                if use_mixup and lam < 1.0:
+                    loss_b, _ = self.criterion(**outputs, labels=labels_b, epoch=epoch)
+                    loss = lam * loss_a + (1.0 - lam) * loss_b
+                else:
+                    loss = loss_a
 
             if loss_log is None:
                 loss_log = loss_dict

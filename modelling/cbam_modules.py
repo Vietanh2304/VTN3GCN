@@ -91,6 +91,10 @@ class AttentionPool2D(nn.Module):
         self.v_proj = nn.Linear(in_channels, in_channels)
         self.out_proj = nn.Linear(in_channels, in_channels)
         self.scale = self.head_dim ** -0.5
+        # CBAM_T1 fix: zero-init out_proj de epoch 0, cbam_out ~= 0
+        # -> tranh death spiral, cho phep cbam_pool hoc gradient an toan
+        nn.init.zeros_(self.out_proj.weight)
+        nn.init.zeros_(self.out_proj.bias)
 
     def forward(self, x):
         # x: (B*T, C, H, W) -> (B*T, C)

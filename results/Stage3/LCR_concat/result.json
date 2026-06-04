@@ -1,0 +1,41 @@
+{
+  "views": [
+    "left",
+    "center",
+    "right"
+  ],
+  "method": "concat",
+  "fusion_type": "feature",
+  "num_views": 3,
+  "best_epoch": 1,
+  "best_val_acc": 0.9330808080808081,
+  "test_acc": 0.9304677623261695,
+  "test_loss": 0.702997260690489,
+  "fusion_out_dim": 3072,
+  "num_params": 10057927,
+  "total_time_sec": 6.586318731307983,
+  "args": {
+    "features_dir": "features_stage1",
+    "views": [
+      "left",
+      "center",
+      "right"
+    ],
+    "method": "concat",
+    "num_classes": 199,
+    "dim": 1024,
+    "dropout": 0.3,
+    "lr": 0.0005,
+    "weight_decay": 0.0001,
+    "batch_size": 128,
+    "epochs": 100,
+    "patience": 15,
+    "label_smoothing": 0.1,
+    "grad_clip": 1.0,
+    "warmup_epochs": 5,
+    "seed": 42,
+    "device": "cuda:1",
+    "num_workers": 2,
+    "output_dir": "/media/ibmelab/ibme31/VTN3GCN_CBAM/results/Stage3/LCR_concat"
+  }
+}
