@@ -42,8 +42,8 @@ Given feature map $F \in \mathbb{R}^{(B \times T) \times C \times H \times W}$ f
   <img src="images/handKP.png" width="800"/>
   <br><em>Figure 4: Keypoints graph mapping hand and body joint links.</em>
 </p>
----
-## Key Contributions
+
+### Key Contributions
 
 - **Multi-View Multi-Stream Architecture**: Integrates RGB, AGCN skeleton features, and Pose Flow from 3 viewpoints with view-specific encoder designs.
 - **ST-CBAM + AttentionPool2D**: Sequential channel, temporal, and spatial attention augmentation after the CNN backbone, with adaptive multi-head attention pooling.
@@ -132,7 +132,12 @@ python main.py --config configs/Stage1_SingleView/Stage1_Center_VSL199.yaml
 bash scripts/run_left_then_right.sh
 
 # VSL400
+# Train Center view
 python main.py --config configs/Stage1_SingleView/Stage1_Center_VSL400.yaml
+
+# Train Left and Right views
+python main.py --config configs/Stage1_SingleView/Stage1_Left_VSL400.yaml
+python main.py --config configs/Stage1_SingleView/Stage1_Right_VSL400.yaml
 ```
 
 ### Stage 2 — Extract Features
